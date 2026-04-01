@@ -1,0 +1,123 @@
+========================================================================
+FINANCE DASHBOARD API - TESTING & INTEGRATION GUIDE
+========================================================================
+Base URL: http://localhost:8000/api/v1
+Interactive Swagger Docs: http://localhost:8000/docs
+System Status: DEVELOPMENT / TESTING READY (SQLite Database)
+
+------------------------------------------------------------------------
+PRE-CONFIGURED TEST ACCOUNTS (Seed Data)
+------------------------------------------------------------------------
+1. Admin User:
+   - Email: admin@example.com
+   - Password: admin123
+   - Role: Admin (Full access to all users and all transactions)
+
+2. Analyst User:
+   - Email: analyst@example.com
+   - Password: analyst123
+   - Role: Analyst (View-only access to all transactions and summaries)
+
+3. Viewer User:
+   - Email: viewer@example.com
+   - Password: viewer123
+   - Role: Viewer (View-only access to own transactions and summaries)
+
+------------------------------------------------------------------------
+AUTHENTICATION FLOW
+------------------------------------------------------------------------
+1. Login / Obtain Token
+   - POST /login/access-token
+   - Body (form-data): username, password
+   - Success: 200 OK { "access_token": "...", "token_type": "bearer" }
+   - Usage: Add header `Authorization: Bearer <TOKEN>` to all requests.
+
+------------------------------------------------------------------------
+USER MANAGEMENT (RBAC ENFORCED)
+------------------------------------------------------------------------
+2. List All Users
+   - GET /users/
+   - Access: Admin ONLY
+   - Query: ?skip=0&limit=100
+
+3. Create New User
+   - POST /users/
+   - Body (JSON): 
+     {
+       "email": "newuser@example.com",
+       "password": "password123",
+       "full_name": "New User",
+       "role": "Viewer",
+       "is_active": true
+     }
+   - Access: Admin ONLY
+
+4. Get Current User Info
+   - GET /users/me
+   - Access: Authenticated (Any role)
+
+5. Update User (By Admin)
+   - PUT /users/{user_id}
+   - Body (JSON): { "full_name": "Updated Name", "role": "Analyst" }
+   - Access: Admin ONLY
+
+------------------------------------------------------------------------
+TRANSACTIONS (RBAC ENFORCED)
+------------------------------------------------------------------------
+6. List Transactions (with advanced filtering)
+   - GET /transactions/
+   - Query: 
+     - skip: int (offset)
+     - limit: int (count)
+     - type: Income | Expense
+     - category: string
+     - start_date: ISO8601 (e.g. 2026-01-01T00:00:00)
+     - end_date: ISO8601
+   - Access: 
+     - Admin/Analyst: Can see ALL transactions in the system.
+     - Viewer: Can only see their OWN transactions.
+
+7. Add New Transaction
+   - POST /transactions/
+   - Body (JSON): 
+     {
+       "amount": 150.75,
+       "type": "Expense",
+       "category": "Food",
+       "notes": "Team lunch",
+       "date": "2026-04-01T12:00:00" (Optional)
+     }
+   - Access: Admin ONLY
+   - Validation: Amount must be > 0. Category must be non-empty.
+
+8. Update/Delete Transaction
+   - PUT /transactions/{id}
+   - DELETE /transactions/{id}
+   - Access: Admin ONLY (Must be the owner of the transaction)
+
+------------------------------------------------------------------------
+DASHBOARD ANALYTICS
+------------------------------------------------------------------------
+9. Dashboard Summary
+   - GET /dashboard/summary
+   - Access: Authenticated (Any role)
+   - Data Visibility: 
+     - Admin/Analyst: Global system-wide summary.
+     - Viewer: Personal summary based on own data.
+   - Response Structure:
+     {
+       "total_income": float,
+       "total_expense": float,
+       "net_balance": float,
+       "category_totals": { "Category": amount, ... },
+       "monthly_summary": [ { "month": "String", "income": float, "expense": float }, ... ],
+       "recent_activity": [ Transaction object, ... ]
+     }
+
+------------------------------------------------------------------------
+DEVELOPMENT NOTES
+------------------------------------------------------------------------
+- DB: SQLite (./sql_app.db) for local testing.
+- Validation: Handled by Pydantic with helpful error messages for bad inputs.
+- Logs: Terminal output includes request details and DB table creation status.
+========================================================================
